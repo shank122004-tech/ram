@@ -91,6 +91,18 @@
   /* ─── UTILITY FUNCTIONS ─────────────────────────────────────────────────── */
   
   /**
+   * Fisher-Yates Shuffle Algorithm for randomizing questions
+   */
+  function shuffleArray(array) {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+  
+  /**
    * Get Firebase Storage URL for mock questions
    */
   function getStorageUrl(exam) {
@@ -192,7 +204,11 @@
             { id: 20, question: "Which is the deepest ocean trench?", options: ["Mariana", "Tonga", "Kuril", "Philippine"], answerIndex: 0 }
           ];
           
-          mockTestState.questions = sampleQuestions;
+          // Normalize, shuffle, and limit to 10 questions
+          let normalizedSample = normalizeQuestionFormat(sampleQuestions);
+          normalizedSample = shuffleArray(normalizedSample);
+          mockTestState.questions = normalizedSample.slice(0, QUESTIONS_PER_PAGE);
+          
           mockTestState.currentQuestionIndex = 0;
           mockTestState.answers = {};
           mockTestState.analyticsData = {
@@ -203,8 +219,8 @@
           };
           
           showNotification(`Using sample questions for ${examCategory}`, 'info');
-          console.log(`[MockTest] Loaded ${sampleQuestions.length} sample questions`);
-          return sampleQuestions;
+          console.log(`[MockTest] Loaded ${mockTestState.questions.length} sample questions (shuffled)`);
+          return mockTestState.questions;
         }
         
         throw new Error(`Firebase Storage returned ${response.status}: ${response.statusText}`);
@@ -220,7 +236,13 @@
       }
       
       // Normalize question format (convert answer text to answerIndex)
-      mockTestState.questions = normalizeQuestionFormat(questions);
+      let normalizedQuestions = normalizeQuestionFormat(questions);
+      
+      // Shuffle questions for randomization
+      normalizedQuestions = shuffleArray(normalizedQuestions);
+      
+      // Limit to QUESTIONS_PER_PAGE (10) questions
+      mockTestState.questions = normalizedQuestions.slice(0, QUESTIONS_PER_PAGE);
       
       mockTestState.currentQuestionIndex = 0;
       mockTestState.answers = {};
@@ -231,7 +253,7 @@
         timePerQuestion: []
       };
       
-      console.log(`[MockTest] Successfully loaded ${mockTestState.questions.length} questions`);
+      console.log(`[MockTest] Successfully loaded ${mockTestState.questions.length} questions (shuffled from ${normalizedQuestions.length} total)`);
       return mockTestState.questions;
       
     } catch (err) {
