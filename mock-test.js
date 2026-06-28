@@ -90,9 +90,8 @@
    * Get Firebase Storage URL for mock questions
    */
   function getStorageUrl(examCategory) {
-    const bucket = STORAGE_BUCKET.replace('firebasestorage.app', 'firebaseio.com');
-    return `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/${MOCK_FOLDER}%2F${examCategory}.json?alt=media`;
-  }
+  return `https://firebasestorage.googleapis.com/v0/b/rankgpt-f8a64.appspot.com/o/${MOCK_FOLDER}%2F${examCategory}.json?alt=media`;
+}
 
   /**
    * Convert question format from Firebase Storage format to mock-test format
