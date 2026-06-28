@@ -139,8 +139,7 @@
       const response = await fetch(url, {
         method: 'GET',
         headers: { 
-          'Accept': 'application/json',
-          'Cache-Control': 'no-cache'
+          'Accept': 'application/json'
         }
       });
 
