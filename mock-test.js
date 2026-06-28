@@ -26,7 +26,7 @@
   'use strict';
 
   /* ─── CONSTANTS ─────────────────────────────────────────────────────────── */
-  const STORAGE_BUCKET = 'rankgpt-f8a64.appspot.com';
+  const STORAGE_BUCKET = 'rankgpt-f8a64.firebasestorage.app';
   const MOCK_FOLDER = 'mock';
   
   const EXAM_CATEGORIES = {
@@ -90,7 +90,7 @@
    * Get Firebase Storage URL for mock questions
    */
   function getStorageUrl(examCategory) {
-    const bucket = STORAGE_BUCKET.replace('appspot.com', 'firebaseio.com');
+    const bucket = STORAGE_BUCKET.replace('rankgpt-f8a64.firebasestorage.app', 'firebaseio.com');
     return `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/${MOCK_FOLDER}%2F${examCategory}.json?alt=media`;
   }
 
