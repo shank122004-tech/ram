@@ -163,6 +163,47 @@
       });
 
       if (!response.ok) {
+        // Handle 404 by showing sample questions
+        if (response.status === 404) {
+          console.warn(`[MockTest] File not found for ${examCategory}, using sample questions`);
+          const sampleQuestions = [
+            { id: 1, question: "What is the capital of India?", options: ["New Delhi", "Mumbai", "Bangalore", "Kolkata"], answerIndex: 0 },
+            { id: 2, question: "Which planet is known as the Red Planet?", options: ["Venus", "Mars", "Jupiter", "Saturn"], answerIndex: 1 },
+            { id: 3, question: "What is 15 × 12?", options: ["150", "180", "200", "220"], answerIndex: 1 },
+            { id: 4, question: "Who wrote 'Romeo and Juliet'?", options: ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"], answerIndex: 1 },
+            { id: 5, question: "What is the chemical symbol for Gold?", options: ["Go", "Gd", "Au", "Ag"], answerIndex: 2 },
+            { id: 6, question: "Which is the largest ocean?", options: ["Atlantic", "Indian", "Arctic", "Pacific"], answerIndex: 3 },
+            { id: 7, question: "What is the square root of 144?", options: ["10", "11", "12", "13"], answerIndex: 2 },
+            { id: 8, question: "Who discovered gravity?", options: ["Galileo", "Newton", "Einstein", "Kepler"], answerIndex: 1 },
+            { id: 9, question: "What is the boiling point of water?", options: ["90°C", "100°C", "110°C", "120°C"], answerIndex: 1 },
+            { id: 10, question: "Which is the smallest continent?", options: ["Africa", "Europe", "Australia", "Antarctica"], answerIndex: 2 },
+            { id: 11, question: "What is 25% of 80?", options: ["15", "20", "25", "30"], answerIndex: 1 },
+            { id: 12, question: "Who painted the Mona Lisa?", options: ["Michelangelo", "Leonardo da Vinci", "Raphael", "Donatello"], answerIndex: 1 },
+            { id: 13, question: "What is the speed of light?", options: ["300,000 km/s", "150,000 km/s", "450,000 km/s", "600,000 km/s"], answerIndex: 0 },
+            { id: 14, question: "Which country has the Great Wall?", options: ["Japan", "Korea", "China", "Vietnam"], answerIndex: 2 },
+            { id: 15, question: "What is 7 × 8?", options: ["54", "56", "58", "60"], answerIndex: 1 },
+            { id: 16, question: "Who was the first President of USA?", options: ["Jefferson", "Washington", "Lincoln", "Kennedy"], answerIndex: 1 },
+            { id: 17, question: "What is the largest planet?", options: ["Saturn", "Mars", "Jupiter", "Neptune"], answerIndex: 2 },
+            { id: 18, question: "How many days in February?", options: ["28", "29", "30", "31"], answerIndex: 0 },
+            { id: 19, question: "What is the currency of Japan?", options: ["Won", "Yuan", "Yen", "Peso"], answerIndex: 2 },
+            { id: 20, question: "Which is the deepest ocean trench?", options: ["Mariana", "Tonga", "Kuril", "Philippine"], answerIndex: 0 }
+          ];
+          
+          mockTestState.questions = sampleQuestions;
+          mockTestState.currentQuestionIndex = 0;
+          mockTestState.answers = {};
+          mockTestState.analyticsData = {
+            correctAnswers: 0,
+            wrongAnswers: 0,
+            skipped: 0,
+            timePerQuestion: []
+          };
+          
+          showNotification(`Using sample questions for ${examCategory}`, 'info');
+          console.log(`[MockTest] Loaded ${sampleQuestions.length} sample questions`);
+          return sampleQuestions;
+        }
+        
         throw new Error(`Firebase Storage returned ${response.status}: ${response.statusText}`);
       }
 
