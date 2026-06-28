@@ -26,7 +26,7 @@
   'use strict';
 
   /* ─── CONSTANTS ─────────────────────────────────────────────────────────── */
-  const STORAGE_BUCKET = 'rankgpt-f8a64.firebasestorage.app';
+  const STORAGE_BUCKET = 'rankgpt-f8a64.appspot.com';
   const MOCK_FOLDER = 'mock';
   
   const EXAM_CATEGORIES = {
