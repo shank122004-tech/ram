@@ -852,9 +852,49 @@
   // Alias for compatibility
   window.openMockTestModal = window.openMockTest;
 
-  // Inject styles
+  // Inject styles with PREMIUM DESIGN
   const mockTestStyles = document.createElement('style');
   mockTestStyles.textContent = `
+  /* ═══════════════════════════════════════════════════════════════
+     PREMIUM MOCK TEST UI — BILLION-DOLLAR QUALITY
+     Inspired by: Apple, Linear, Notion, Perplexity, Stripe, Arc, Duolingo
+     ═══════════════════════════════════════════════════════════════ */
+
+  /* ─── ANIMATION KEYFRAMES ─── */
+  @keyframes mtSpin {
+    to { transform: rotate(360deg) !important; }
+  }
+
+  @keyframes mtPulse {
+    0%, 100% { opacity: 1 !important; }
+    50% { opacity: 0.5 !important; }
+  }
+
+  @keyframes mtSlideIn {
+    from { 
+      opacity: 0 !important;
+      transform: translateY(20px) !important;
+    }
+    to { 
+      opacity: 1 !important;
+      transform: translateY(0) !important;
+    }
+  }
+
+  @keyframes mtFadeIn {
+    from { opacity: 0 !important; }
+    to { opacity: 1 !important; }
+  }
+
+  @keyframes mtGlowPulse {
+    0%, 100% { 
+      box-shadow: 0 0 20px rgba(108, 99, 255, 0.3) !important;
+    }
+    50% { 
+      box-shadow: 0 0 40px rgba(108, 99, 255, 0.5) !important;
+    }
+  }
+
   /* ─── MODAL BASE ─── */
   .mt-modal-overlay {
     position: fixed !important;
@@ -862,50 +902,76 @@
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    background: rgba(0, 0, 0, 0.8) !important;
+    background: rgba(0, 0, 0, 0.85) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     z-index: 10000 !important;
-    backdrop-filter: blur(5px) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    animation: mtFadeIn 0.3s ease-out !important;
   }
 
   .mt-modal-content {
-    background: linear-gradient(135deg, #1a1a2e, #16213e) !important;
-    border: 1px solid rgba(108, 99, 255, 0.2) !important;
-    border-radius: 16px !important;
+    background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%) !important;
+    border: 1px solid rgba(108, 99, 255, 0.25) !important;
+    border-radius: 24px !important;
     max-width: 800px !important;
     width: 95% !important;
     max-height: 85vh !important;
     display: flex !important;
     flex-direction: column !important;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: 
+      0 0 60px rgba(108, 99, 255, 0.15),
+      0 25px 50px rgba(0, 0, 0, 0.6),
+      inset 1px 1px 0 rgba(255, 255, 255, 0.05) !important;
+    animation: mtSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
   }
 
   .mt-modal-header {
-    padding: 24px !important;
-    border-bottom: 1px solid rgba(108, 99, 255, 0.2) !important;
+    padding: 32px 32px 24px 32px !important;
+    border-bottom: 1px solid rgba(108, 99, 255, 0.15) !important;
     color: #ffffff !important;
     display: flex !important;
     justify-content: space-between !important;
-    align-items: center !important;
+    align-items: flex-start !important;
   }
 
   .mt-modal-header h2 {
     margin: 0 !important;
-    font-size: 20px !important;
-    font-weight: 700 !important;
+    font-size: 28px !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.5px !important;
   }
 
   .mt-modal-body {
     flex: 1 !important;
-    padding: 24px !important;
+    padding: 32px !important;
     overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  .mt-modal-body::-webkit-scrollbar {
+    width: 8px !important;
+  }
+
+  .mt-modal-body::-webkit-scrollbar-track {
+    background: rgba(108, 99, 255, 0.05) !important;
+    border-radius: 4px !important;
+  }
+
+  .mt-modal-body::-webkit-scrollbar-thumb {
+    background: rgba(108, 99, 255, 0.2) !important;
+    border-radius: 4px !important;
+  }
+
+  .mt-modal-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(108, 99, 255, 0.3) !important;
   }
 
   .mt-modal-footer {
-    padding: 16px 24px !important;
-    border-top: 1px solid rgba(108, 99, 255, 0.2) !important;
+    padding: 20px 32px 32px 32px !important;
+    border-top: 1px solid rgba(108, 99, 255, 0.15) !important;
     display: flex !important;
     gap: 12px !important;
     justify-content: flex-end !important;
@@ -914,269 +980,372 @@
   .mt-modal-close {
     background: none !important;
     border: none !important;
-    color: rgba(255, 255, 255, 0.5) !important;
-    font-size: 24px !important;
+    color: rgba(255, 255, 255, 0.4) !important;
+    font-size: 28px !important;
     cursor: pointer !important;
-    transition: color 0.2s !important;
+    transition: all 0.2s !important;
+    width: 40px !important;
+    height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 8px !important;
   }
 
   .mt-modal-close:hover {
-    color: rgba(255, 255, 255, 0.85) !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+    background: rgba(108, 99, 255, 0.1) !important;
   }
 
   /* ─── EXAM SELECTION ─── */
+  .mt-exam-selection {
+    max-width: 1000px !important;
+  }
+
   .mt-category-grid {
     display: grid !important;
-    gap: 24px !important;
+    grid-template-columns: 1fr !important;
+    gap: 40px !important;
   }
 
   .mt-category-section {
     display: flex !important;
     flex-direction: column !important;
-    gap: 12px !important;
+    gap: 20px !important;
   }
 
   .mt-category-header {
     margin: 0 !important;
-    font-size: 16px !important;
+    font-size: 13px !important;
     font-weight: 700 !important;
-    color: rgba(255, 255, 255, 0.9) !important;
+    color: rgba(255, 255, 255, 0.45) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.2px !important;
   }
 
   .mt-exam-buttons {
     display: grid !important;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
-    gap: 12px !important;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+    gap: 16px !important;
   }
 
   .mt-exam-btn {
-    padding: 16px 12px !important;
-    background: rgba(108, 99, 255, 0.12) !important;
-    border: 1px solid rgba(108, 99, 255, 0.3) !important;
-    border-radius: 12px !important;
+    background: linear-gradient(135deg, rgba(108, 99, 255, 0.12), rgba(139, 92, 246, 0.06)) !important;
+    border: 1.5px solid rgba(108, 99, 255, 0.25) !important;
+    border-radius: 16px !important;
+    padding: 24px 16px !important;
     color: rgba(255, 255, 255, 0.9) !important;
-    font-size: 13px !important;
+    font-size: 14px !important;
     font-weight: 600 !important;
     cursor: pointer !important;
-    transition: all 0.2s !important;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
     text-align: center !important;
+    position: relative !important;
+    overflow: hidden !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+  }
+
+  .mt-exam-btn::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent) !important;
+    opacity: 0 !important;
+    transition: opacity 0.3s !important;
+    pointer-events: none !important;
   }
 
   .mt-exam-btn:hover {
-    background: rgba(108, 99, 255, 0.25) !important;
+    background: linear-gradient(135deg, rgba(108, 99, 255, 0.25), rgba(139, 92, 246, 0.15)) !important;
     border-color: rgba(108, 99, 255, 0.5) !important;
+    transform: translateY(-6px) !important;
+    box-shadow: 
+      0 12px 30px rgba(108, 99, 255, 0.25),
+      0 0 40px rgba(108, 99, 255, 0.1) !important;
+  }
+
+  .mt-exam-btn:hover::before {
+    opacity: 1 !important;
+  }
+
+  .mt-exam-btn:active {
     transform: translateY(-2px) !important;
   }
 
   .mt-exam-name {
-    font-size: 13px !important;
+    display: block !important;
+    word-break: break-word !important;
+    line-height: 1.5 !important;
   }
 
-  /* ─── QUESTION VIEW ─── */
+  /* ─── QUESTION SCREEN ─── */
+  .mt-question-container {
+    max-width: 850px !important;
+  }
+
   .mt-question-card {
     display: flex !important;
     flex-direction: column !important;
-    gap: 20px !important;
-  }
-
-  .mt-progress-info {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-  }
-
-  .mt-exam-title {
-    font-size: 16px !important;
-    font-weight: 700 !important;
-    color: #6c63ff !important;
-  }
-
-  .mt-question-progress {
-    font-size: 13px !important;
-    color: rgba(255, 255, 255, 0.6) !important;
+    gap: 28px !important;
   }
 
   .mt-question-text {
     display: flex !important;
     flex-direction: column !important;
-    gap: 12px !important;
+    gap: 16px !important;
   }
 
   .mt-q-number {
-    font-size: 12px !important;
+    font-size: 11px !important;
     font-weight: 700 !important;
-    color: #6c63ff !important;
+    color: #8b7aff !important;
     text-transform: uppercase !important;
+    letter-spacing: 1px !important;
   }
 
   .mt-question-text p {
     margin: 0 !important;
-    font-size: 16px !important;
+    font-size: 18px !important;
     font-weight: 500 !important;
     color: rgba(255, 255, 255, 0.95) !important;
-    line-height: 1.6 !important;
+    line-height: 1.7 !important;
+    letter-spacing: -0.3px !important;
   }
 
   .mt-options {
     display: flex !important;
     flex-direction: column !important;
-    gap: 12px !important;
+    gap: 14px !important;
   }
 
   .mt-option-btn {
+    background: linear-gradient(135deg, rgba(108, 99, 255, 0.08), rgba(139, 92, 246, 0.03)) !important;
+    border: 1.5px solid rgba(108, 99, 255, 0.2) !important;
+    border-radius: 14px !important;
+    padding: 18px 20px !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    text-align: left !important;
+    cursor: pointer !important;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
     display: flex !important;
     align-items: center !important;
-    gap: 12px !important;
-    padding: 14px 16px !important;
-    background: rgba(108, 99, 255, 0.08) !important;
-    border: 1.5px solid rgba(108, 99, 255, 0.2) !important;
-    border-radius: 8px !important;
-    color: rgba(255, 255, 255, 0.85) !important;
-    font-size: 14px !important;
+    gap: 16px !important;
+    font-size: 15px !important;
     font-weight: 500 !important;
-    cursor: pointer !important;
-    transition: all 0.2s !important;
-    text-align: left !important;
+    position: relative !important;
+    overflow: hidden !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  }
+
+  .mt-option-btn::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: -100% !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent) !important;
+    transition: left 0.5s !important;
   }
 
   .mt-option-btn:hover {
-    background: rgba(108, 99, 255, 0.15) !important;
-    border-color: rgba(108, 99, 255, 0.4) !important;
+    background: linear-gradient(135deg, rgba(108, 99, 255, 0.15), rgba(139, 92, 246, 0.08)) !important;
+    border-color: rgba(108, 99, 255, 0.35) !important;
+    transform: translateX(6px) !important;
+    box-shadow: 
+      0 6px 20px rgba(108, 99, 255, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+  }
+
+  .mt-option-btn:hover::before {
+    left: 100% !important;
   }
 
   .mt-option-btn.selected {
-    background: rgba(108, 99, 255, 0.25) !important;
+    background: linear-gradient(135deg, rgba(108, 99, 255, 0.3), rgba(139, 92, 246, 0.15)) !important;
     border-color: #6c63ff !important;
-    color: #ffffff !important;
+    box-shadow: 
+      0 8px 25px rgba(108, 99, 255, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+    animation: mtGlowPulse 2s ease-in-out infinite !important;
   }
 
   .mt-option-letter {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 28px !important;
-    height: 28px !important;
-    background: rgba(108, 99, 255, 0.3) !important;
-    border-radius: 50% !important;
+    width: 36px !important;
+    height: 36px !important;
+    background: rgba(108, 99, 255, 0.15) !important;
+    border-radius: 10px !important;
     font-weight: 700 !important;
+    font-size: 14px !important;
     flex-shrink: 0 !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    transition: all 0.25s !important;
+  }
+
+  .mt-option-btn:hover .mt-option-letter {
+    background: rgba(108, 99, 255, 0.25) !important;
+  }
+
+  .mt-option-btn.selected .mt-option-letter {
+    background: #6c63ff !important;
+    color: #ffffff !important;
   }
 
   .mt-option-text {
     flex: 1 !important;
+    word-break: break-word !important;
   }
 
   /* ─── BUTTONS ─── */
   .mt-btn {
-    padding: 12px 24px !important;
-    border-radius: 8px !important;
-    border: none !important;
-    font-size: 13px !important;
+    padding: 12px 28px !important;
+    border-radius: 10px !important;
+    font-size: 14px !important;
     font-weight: 600 !important;
     cursor: pointer !important;
-    transition: all 0.2s !important;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    border: none !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+
+  .mt-btn::after {
+    content: '' !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    width: 0 !important;
+    height: 0 !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    transform: translate(-50%, -50%) !important;
+    transition: width 0.6s, height 0.6s !important;
+  }
+
+  .mt-btn:active::after {
+    width: 300px !important;
+    height: 300px !important;
   }
 
   .mt-btn-primary {
-    background: linear-gradient(135deg, #6c63ff, #a78bfa) !important;
+    background: linear-gradient(135deg, #6c63ff 0%, #8b7aff 100%) !important;
     color: #ffffff !important;
+    box-shadow: 0 8px 20px rgba(108, 99, 255, 0.3) !important;
   }
 
   .mt-btn-primary:hover {
     transform: translateY(-2px) !important;
-    box-shadow: 0 8px 20px rgba(108, 99, 255, 0.4) !important;
+    box-shadow: 0 12px 30px rgba(108, 99, 255, 0.4) !important;
   }
 
   .mt-btn-secondary {
-    background: rgba(108, 99, 255, 0.15) !important;
+    background: rgba(108, 99, 255, 0.1) !important;
     color: rgba(255, 255, 255, 0.85) !important;
-    border: 1px solid rgba(108, 99, 255, 0.3) !important;
+    border: 1.5px solid rgba(108, 99, 255, 0.25) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
   }
 
   .mt-btn-secondary:hover {
-    background: rgba(108, 99, 255, 0.25) !important;
-    border-color: rgba(108, 99, 255, 0.5) !important;
+    background: rgba(108, 99, 255, 0.15) !important;
+    border-color: rgba(108, 99, 255, 0.4) !important;
+    transform: translateY(-2px) !important;
   }
 
   .mt-nav-btn {
-    padding: 10px 20px !important;
-    background: rgba(108, 99, 255, 0.15) !important;
-    border: 1px solid rgba(108, 99, 255, 0.3) !important;
-    border-radius: 6px !important;
+    padding: 11px 24px !important;
+    background: rgba(108, 99, 255, 0.1) !important;
+    border: 1.5px solid rgba(108, 99, 255, 0.25) !important;
+    border-radius: 10px !important;
     color: rgba(255, 255, 255, 0.85) !important;
-    font-size: 13px !important;
+    font-size: 14px !important;
     font-weight: 600 !important;
     cursor: pointer !important;
-    transition: all 0.2s !important;
+    transition: all 0.25s !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
   }
 
   .mt-nav-btn:hover:not(:disabled) {
-    background: rgba(108, 99, 255, 0.25) !important;
-    border-color: rgba(108, 99, 255, 0.5) !important;
+    background: rgba(108, 99, 255, 0.15) !important;
+    border-color: rgba(108, 99, 255, 0.4) !important;
+    transform: translateY(-2px) !important;
   }
 
   .mt-nav-btn:disabled {
-    opacity: 0.5 !important;
+    opacity: 0.4 !important;
     cursor: not-allowed !important;
   }
 
-  /* ─── LOADING SPINNER ─── */
+  /* ─── LOADING ─── */
   .mt-loading-spinner {
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
-    gap: 16px !important;
+    justify-content: center !important;
+    gap: 32px !important;
     color: rgba(255, 255, 255, 0.85) !important;
   }
 
   .mt-spinner {
-    width: 48px !important;
-    height: 48px !important;
-    border: 3px solid rgba(108, 99, 255, 0.2) !important;
+    width: 56px !important;
+    height: 56px !important;
+    border: 3px solid rgba(108, 99, 255, 0.15) !important;
     border-top-color: #6c63ff !important;
+    border-right-color: #8b7aff !important;
     border-radius: 50% !important;
     animation: mtSpin 0.8s linear infinite !important;
-  }
-
-  @keyframes mtSpin {
-    to { transform: rotate(360deg) !important; }
+    box-shadow: 0 0 20px rgba(108, 99, 255, 0.2) !important;
   }
 
   /* ─── RESULTS ─── */
   .mt-results-header {
     text-align: center !important;
-    margin-bottom: 24px !important;
+    margin-bottom: 40px !important;
   }
 
   .mt-results-header h3 {
-    margin: 0 0 8px 0 !important;
-    font-size: 20px !important;
-    font-weight: 600 !important;
+    margin: 0 0 12px 0 !important;
+    font-size: 28px !important;
+    font-weight: 800 !important;
     background: linear-gradient(135deg, #6c63ff, #a78bfa) !important;
     -webkit-background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
     background-clip: text !important;
+    letter-spacing: -0.5px !important;
   }
 
   .mt-results-header p {
     margin: 0 !important;
-    font-size: 14px !important;
+    font-size: 15px !important;
     color: rgba(255, 255, 255, 0.6) !important;
   }
 
   .mt-score-section {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
-    gap: 16px !important;
-    margin-bottom: 24px !important;
+    gap: 20px !important;
+    margin-bottom: 32px !important;
   }
 
   .mt-result-card {
-    background: rgba(108, 99, 255, 0.08) !important;
-    border: 1px solid rgba(108, 99, 255, 0.2) !important;
-    border-radius: 12px !important;
-    padding: 20px !important;
+    background: linear-gradient(135deg, rgba(108, 99, 255, 0.12), rgba(139, 92, 246, 0.06)) !important;
+    border: 1.5px solid rgba(108, 99, 255, 0.25) !important;
+    border-radius: 16px !important;
+    padding: 28px 24px !important;
     text-align: center !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+    transition: all 0.3s !important;
+  }
+
+  .mt-result-card:hover {
+    transform: translateY(-4px) !important;
+    border-color: rgba(108, 99, 255, 0.4) !important;
+    box-shadow: 0 8px 25px rgba(108, 99, 255, 0.15) !important;
   }
 
   .mt-rank-card {
@@ -1184,19 +1353,20 @@
   }
 
   .mt-result-label {
-    font-size: 12px !important;
+    font-size: 11px !important;
     font-weight: 700 !important;
-    color: rgba(255, 255, 255, 0.5) !important;
+    color: rgba(255, 255, 255, 0.45) !important;
     text-transform: uppercase !important;
     letter-spacing: 1px !important;
-    margin-bottom: 8px !important;
+    margin-bottom: 12px !important;
   }
 
   .mt-result-value {
     font-weight: 800 !important;
-    font-size: 24px !important;
+    font-size: 32px !important;
     margin-bottom: 8px !important;
     color: #6c63ff !important;
+    letter-spacing: -1px !important;
   }
 
   .mt-result-percentage {
@@ -1204,123 +1374,186 @@
   }
 
   .mt-result-grade {
-    font-size: 13px !important;
+    font-size: 14px !important;
     color: rgba(255, 255, 255, 0.7) !important;
+    font-weight: 500 !important;
   }
 
   .mt-result-likelihood {
-    font-size: 13px !important;
+    font-size: 14px !important;
     font-weight: 600 !important;
     margin-bottom: 8px !important;
+    color: rgba(255, 255, 255, 0.85) !important;
   }
 
   .mt-result-percentile {
-    font-size: 12px !important;
+    font-size: 13px !important;
     color: rgba(255, 255, 255, 0.5) !important;
   }
 
   /* ─── ANALYTICS ─── */
   .mt-analytics-section {
-    margin-bottom: 24px !important;
+    margin-bottom: 32px !important;
+  }
+
+  .mt-analytics-section h4 {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    margin: 0 0 20px 0 !important;
+    letter-spacing: -0.3px !important;
   }
 
   .mt-analytics-grid {
     display: grid !important;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
-    gap: 12px !important;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+    gap: 14px !important;
   }
 
   .mt-stat-card {
-    background: linear-gradient(135deg, rgba(108, 99, 255, 0.1), rgba(139, 92, 246, 0.05)) !important;
-    border: 1px solid rgba(108, 99, 255, 0.2) !important;
-    border-radius: 10px !important;
-    padding: 16px !important;
+    background: linear-gradient(135deg, rgba(108, 99, 255, 0.12), rgba(139, 92, 246, 0.06)) !important;
+    border: 1.5px solid rgba(108, 99, 255, 0.2) !important;
+    border-radius: 14px !important;
+    padding: 20px 16px !important;
     text-align: center !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    transition: all 0.3s !important;
+  }
+
+  .mt-stat-card:hover {
+    transform: translateY(-3px) !important;
+    border-color: rgba(108, 99, 255, 0.35) !important;
+    box-shadow: 0 6px 20px rgba(108, 99, 255, 0.1) !important;
   }
 
   .mt-stat-icon {
-    font-size: 24px !important;
-    margin-bottom: 8px !important;
+    font-size: 28px !important;
+    margin-bottom: 12px !important;
   }
 
   .mt-stat-label {
-    font-size: 11px !important;
-    color: rgba(255, 255, 255, 0.6) !important;
+    font-size: 10px !important;
+    color: rgba(255, 255, 255, 0.5) !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
+    letter-spacing: 0.7px !important;
     margin-bottom: 8px !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
   }
 
   .mt-stat-value {
-    font-size: 18px !important;
+    font-size: 20px !important;
     font-weight: 800 !important;
     color: #ffffff !important;
+    letter-spacing: -0.5px !important;
   }
 
   /* ─── RECOMMENDATIONS ─── */
   .mt-recommendations {
-    background: rgba(108, 99, 255, 0.08) !important;
-    border: 1px solid rgba(108, 99, 255, 0.2) !important;
-    border-radius: 10px !important;
-    padding: 16px !important;
+    background: linear-gradient(135deg, rgba(108, 99, 255, 0.12), rgba(139, 92, 246, 0.06)) !important;
+    border: 1.5px solid rgba(108, 99, 255, 0.25) !important;
+    border-radius: 14px !important;
+    padding: 20px !important;
     margin-bottom: 12px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
   }
 
   .mt-recommendations h4 {
-    margin: 0 0 8px 0 !important;
-    font-size: 13px !important;
+    margin: 0 0 10px 0 !important;
+    font-size: 14px !important;
     font-weight: 700 !important;
-    color: rgba(255, 255, 255, 0.85) !important;
+    color: rgba(255, 255, 255, 0.9) !important;
   }
 
   .mt-recommendations p {
     margin: 0 !important;
-    font-size: 13px !important;
-    color: rgba(255, 255, 255, 0.7) !important;
+    font-size: 14px !important;
+    color: rgba(255, 255, 255, 0.75) !important;
     line-height: 1.6 !important;
   }
 
   .mt-explanation {
-    margin-top: 16px !important;
-    padding: 12px !important;
-    background: rgba(59,130,246,0.1) !important;
+    margin-top: 20px !important;
+    padding: 16px !important;
+    background: rgba(59, 130, 246, 0.08) !important;
     border-left: 3px solid #3b82f6 !important;
-    border-radius: 4px !important;
-    font-size: 13px !important;
+    border-radius: 10px !important;
+    font-size: 14px !important;
     color: rgba(255, 255, 255, 0.85) !important;
+    line-height: 1.6 !important;
   }
 
   /* ─── RESPONSIVE ─── */
-  @media (max-width: 600px) {
-    .mt-modal-content {
-      max-height: 95vh !important;
-      width: 98% !important;
+  @media (max-width: 768px) {
+    .mt-modal-header {
+      padding: 24px 24px 20px 24px !important;
+    }
+
+    .mt-modal-body {
+      padding: 24px !important;
+    }
+
+    .mt-modal-footer {
+      padding: 16px 24px 24px 24px !important;
+    }
+
+    .mt-category-grid {
+      gap: 32px !important;
+    }
+
+    .mt-exam-buttons {
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
     }
 
     .mt-score-section {
       grid-template-columns: 1fr !important;
     }
 
-    .mt-exam-buttons {
-      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important;
+    .mt-analytics-grid {
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .mt-modal-content {
+      max-height: 95vh !important;
+      width: 98% !important;
+      border-radius: 20px !important;
     }
 
     .mt-modal-header {
-      padding: 16px !important;
+      padding: 20px !important;
+      flex-direction: column !important;
+      gap: 12px !important;
+    }
+
+    .mt-modal-header h2 {
+      font-size: 24px !important;
     }
 
     .mt-modal-body {
-      padding: 16px !important;
+      padding: 20px !important;
     }
 
     .mt-modal-footer {
-      padding: 12px 16px !important;
+      padding: 12px 20px 20px 20px !important;
       flex-direction: column-reverse !important;
     }
 
-    .mt-modal-footer .mt-btn {
+    .mt-modal-footer .mt-btn,
+    .mt-modal-footer .mt-nav-btn {
       width: 100% !important;
+    }
+
+    .mt-exam-buttons {
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important;
+    }
+
+    .mt-result-value {
+      font-size: 28px !important;
+    }
+
+    .mt-results-header h3 {
+      font-size: 24px !important;
     }
   }
 `;
