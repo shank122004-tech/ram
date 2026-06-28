@@ -89,8 +89,8 @@
   /**
    * Get Firebase Storage URL for mock questions
    */
-  function getStorageUrl(examCategory) {
-  return `https://firebasestorage.googleapis.com/v0/b/rankgpt-f8a64.appspot.com/o/${MOCK_FOLDER}%2F${examCategory}.json?alt=media`;
+  function getStorageUrl(exam) {
+    return `https://firebasestorage.googleapis.com/v0/b/rankgpt-f8a64.firebasestorage.app/o/mock%2F${exam}%2F${exam}.json?alt=media`;
 }
 
   /**
