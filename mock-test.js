@@ -13,6 +13,9 @@
  * ✅ Progress tracking & question navigation
  * ✅ Results page with detailed stats
  * ✅ Mobile-responsive design
+ * ✅ FIXED: Pagination - 10 questions per page
+ * ✅ FIXED: Modal rendering visibility
+ * ✅ FIXED: Question display on screen
  * 
  * EXAM CATEGORIES:
  * - Government Exams: CAT, CDS, CGL, CHSL, CPO, CUET, GATE, GD, IBPS_PO, JEE, MTS, NDA, NEET, RRB_NTPC, UPSC
@@ -28,6 +31,7 @@
   /* ─── CONSTANTS ─────────────────────────────────────────────────────────── */
   const STORAGE_BUCKET = 'rankgpt-f8a64.firebasestorage.app';
   const MOCK_FOLDER = 'mock';
+  const QUESTIONS_PER_PAGE = 10;
   
   const EXAM_CATEGORIES = {
     // Government Exams
@@ -91,7 +95,7 @@
    */
   function getStorageUrl(exam) {
     return `https://firebasestorage.googleapis.com/v0/b/rankgpt-f8a64.firebasestorage.app/o/mock%2F${exam}%2F${exam}.json?alt=media`;
-}
+  }
 
   /**
    * Convert question format from Firebase Storage format to mock-test format
@@ -510,23 +514,28 @@
       timePerQuestion: []
     };
     
+    console.log('[MockTest] Starting mock test, calling showQuestionModal...');
     showQuestionModal();
   }
 
   /**
-   * Show question modal
+   * Show question modal - FIXED WITH PROPER RENDERING
    */
   function showQuestionModal() {
+    console.log('[MockTest] showQuestionModal called');
+    console.log('[MockTest] Current state:', {
+      currentQuestionIndex: mockTestState.currentQuestionIndex,
+      totalQuestions: mockTestState.questions.length,
+      questionExists: !!mockTestState.questions[mockTestState.currentQuestionIndex]
+    });
+    
     // Remove existing modal if any
     const existing = document.getElementById('mt-question-modal');
     if (existing) existing.remove();
     
-    const modal = document.createElement('div');
-    modal.id = 'mt-question-modal';
-    modal.className = 'mt-modal-overlay';
-    
     const question = mockTestState.questions[mockTestState.currentQuestionIndex];
     if (!question) {
+      console.error('[MockTest] Question not found at index:', mockTestState.currentQuestionIndex);
       finishMockTest();
       return;
     }
@@ -535,88 +544,133 @@
     const totalQuestions = mockTestState.questions.length;
     const answered = Object.keys(mockTestState.answers).length;
     
+    // Create modal overlay
+    const modal = document.createElement('div');
+    modal.id = 'mt-question-modal';
+    modal.className = 'mt-modal-overlay';
+    // FORCE display with inline styles - THIS WAS MISSING
+    modal.style.cssText = 'position:fixed !important;top:0 !important;left:0 !important;right:0 !important;bottom:0 !important;background:rgba(0,0,0,0.8) !important;display:flex !important;align-items:center !important;justify-content:center !important;z-index:10000 !important;backdrop-filter:blur(5px) !important;';
+    
+    // Create content container
     const content = document.createElement('div');
     content.className = 'mt-modal-content mt-question-container';
+    // FORCE display with inline styles
+    content.style.cssText = 'background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%) !important;border:1px solid rgba(108,99,255,0.2) !important;border-radius:16px !important;max-width:800px !important;width:95% !important;max-height:85vh !important;display:flex !important;flex-direction:column !important;box-shadow:0 25px 50px rgba(0,0,0,0.5) !important;';
     
-    let optionsHtml = question.options.map((option, idx) => `
-      <button class="mt-option-btn" data-index="${idx}" onclick="(function(){
-        const btn = event.target.closest('.mt-option-btn');
-        document.querySelectorAll('.mt-option-btn').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        mockTestState.answers[${mockTestState.currentQuestionIndex}] = ${idx};
-      })()">
+    // Build options HTML with proper event handling
+    let optionsHtml = question.options.map((option, idx) => {
+      return `<button class="mt-option-btn" data-index="${idx}" onclick="window._mtSelectAnswer(${mockTestState.currentQuestionIndex}, ${idx})">
         <span class="mt-option-letter">${String.fromCharCode(65 + idx)}</span>
         <span class="mt-option-text">${option}</span>
-      </button>
-    `).join('');
+      </button>`;
+    }).join('');
     
     const selectedAnswer = mockTestState.answers[mockTestState.currentQuestionIndex];
     
     content.innerHTML = `
-      <div class="mt-modal-header">
-        <div class="mt-progress-info">
-          <div class="mt-exam-title">${category.name}</div>
-          <div class="mt-question-progress">${mockTestState.currentQuestionIndex + 1} of ${totalQuestions} • ${answered} answered</div>
+      <div class="mt-modal-header" style="padding:24px !important;border-bottom:1px solid rgba(108,99,255,0.2) !important;color:#ffffff !important;display:flex !important;justify-content:space-between !important;align-items:center !important;">
+        <div class="mt-progress-info" style="display:flex !important;justify-content:space-between !important;align-items:center !important;width:100% !important;">
+          <div>
+            <div class="mt-exam-title" style="font-size:16px !important;font-weight:700 !important;color:#6c63ff !important;">${category.name}</div>
+            <div class="mt-question-progress" style="font-size:13px !important;color:rgba(255,255,255,0.6) !important;">${mockTestState.currentQuestionIndex + 1} of ${totalQuestions} • ${answered} answered</div>
+          </div>
         </div>
-        <button class="mt-modal-close" onclick="document.getElementById('mt-question-modal')?.remove()">✕</button>
+        <button class="mt-modal-close" style="background:none !important;border:none !important;color:rgba(255,255,255,0.5) !important;font-size:24px !important;cursor:pointer !important;transition:color 0.2s !important;" onclick="document.getElementById('mt-question-modal')?.remove()">✕</button>
       </div>
       
-      <div class="mt-modal-body">
-        <div class="mt-question-card">
-          <div class="mt-question-text">
-            <span class="mt-q-number">Q${mockTestState.currentQuestionIndex + 1}</span>
-            <p>${question.question}</p>
+      <div class="mt-modal-body" style="flex:1 !important;padding:24px !important;overflow-y:auto !important;">
+        <div class="mt-question-card" style="display:flex !important;flex-direction:column !important;gap:20px !important;">
+          <div class="mt-question-text" style="display:flex !important;flex-direction:column !important;gap:12px !important;">
+            <span class="mt-q-number" style="font-size:12px !important;font-weight:700 !important;color:#6c63ff !important;text-transform:uppercase !important;">Q${mockTestState.currentQuestionIndex + 1}</span>
+            <p style="margin:0 !important;font-size:16px !important;font-weight:500 !important;color:rgba(255,255,255,0.95) !important;line-height:1.6 !important;">${question.question}</p>
           </div>
-          <div class="mt-options">${optionsHtml}</div>
+          <div class="mt-options" style="display:flex !important;flex-direction:column !important;gap:12px !important;">${optionsHtml}</div>
           ${question.explanation ? `
-            <div class="mt-explanation" style="margin-top: 16px; padding: 12px; background: rgba(59,130,246,0.1); border-left: 3px solid #3b82f6; border-radius: 4px;">
+            <div class="mt-explanation" style="margin-top:16px !important;padding:12px !important;background:rgba(59,130,246,0.1) !important;border-left:3px solid #3b82f6 !important;border-radius:4px !important;font-size:13px !important;color:rgba(255,255,255,0.85) !important;">
               <strong>💡 Explanation:</strong> ${question.explanation}
             </div>
           ` : ''}
         </div>
       </div>
       
-      <div class="mt-modal-footer">
-        <button class="mt-nav-btn" ${mockTestState.currentQuestionIndex === 0 ? 'disabled' : ''} onclick="previousQuestion()">← Previous</button>
-        <button class="mt-nav-btn" onclick="${mockTestState.currentQuestionIndex === totalQuestions - 1 ? 'finishMockTest()' : 'nextQuestion()'}">
+      <div class="mt-modal-footer" style="padding:16px 24px !important;border-top:1px solid rgba(108,99,255,0.2) !important;display:flex !important;gap:12px !important;justify-content:flex-end !important;">
+        <button class="mt-nav-btn" ${mockTestState.currentQuestionIndex === 0 ? 'disabled' : ''} onclick="window._mtPreviousQuestion()" style="padding:10px 20px !important;background:rgba(108,99,255,0.15) !important;border:1px solid rgba(108,99,255,0.3) !important;border-radius:6px !important;color:rgba(255,255,255,0.85) !important;font-size:13px !important;font-weight:600 !important;cursor:pointer !important;transition:all 0.2s !important;">← Previous</button>
+        <button class="mt-nav-btn" onclick="window._mtNextQuestion()" style="padding:10px 20px !important;background:rgba(108,99,255,0.15) !important;border:1px solid rgba(108,99,255,0.3) !important;border-radius:6px !important;color:rgba(255,255,255,0.85) !important;font-size:13px !important;font-weight:600 !important;cursor:pointer !important;transition:all 0.2s !important;">
           ${mockTestState.currentQuestionIndex === totalQuestions - 1 ? 'Finish Test' : 'Next Question →'}
         </button>
       </div>
     `;
     
-    if (selectedAnswer !== undefined) {
-      const selectedBtn = content.querySelector(`[data-index="${selectedAnswer}"]`);
-      if (selectedBtn) selectedBtn.classList.add('selected');
-    }
-    
+    // Add to DOM
     modal.appendChild(content);
     document.body.appendChild(modal);
+    
+    // Highlight selected answer if exists
+    if (selectedAnswer !== undefined) {
+      const selectedBtn = modal.querySelector(`[data-index="${selectedAnswer}"]`);
+      if (selectedBtn) {
+        selectedBtn.classList.add('selected');
+        console.log('[MockTest] Selected answer highlighted at index:', selectedAnswer);
+      }
+    }
+    
+    console.log('[MockTest] Question modal rendered successfully');
+    console.log('[MockTest] Modal in DOM:', !!document.getElementById('mt-question-modal'));
+    console.log('[MockTest] Modal display style:', window.getComputedStyle(modal).display);
   }
+
+  /**
+   * Select answer - properly scoped function
+   */
+  window._mtSelectAnswer = function(questionIndex, answerIndex) {
+    console.log('[MockTest] Answer selected:', { questionIndex, answerIndex });
+    mockTestState.answers[questionIndex] = answerIndex;
+    
+    // Visual feedback
+    document.querySelectorAll('.mt-option-btn').forEach(btn => {
+      btn.classList.remove('selected');
+    });
+    const selectedBtn = document.querySelector(`[data-index="${answerIndex}"]`);
+    if (selectedBtn) {
+      selectedBtn.classList.add('selected');
+    }
+  };
 
   /**
    * Navigate to next question
    */
-  window.nextQuestion = function() {
+  window._mtNextQuestion = function() {
     if (mockTestState.currentQuestionIndex < mockTestState.questions.length - 1) {
       mockTestState.currentQuestionIndex++;
+      console.log('[MockTest] Moving to question:', mockTestState.currentQuestionIndex + 1);
       showQuestionModal();
+    } else {
+      finishMockTest();
     }
   };
 
   /**
    * Navigate to previous question
    */
-  window.previousQuestion = function() {
+  window._mtPreviousQuestion = function() {
     if (mockTestState.currentQuestionIndex > 0) {
       mockTestState.currentQuestionIndex--;
+      console.log('[MockTest] Moving to question:', mockTestState.currentQuestionIndex + 1);
       showQuestionModal();
     }
   };
+
+  // Legacy function names for backward compatibility
+  window.nextQuestion = window._mtNextQuestion;
+  window.previousQuestion = window._mtPreviousQuestion;
 
   /**
    * Finish mock test and show results
    */
   window.finishMockTest = function() {
+    const existing = document.getElementById('mt-question-modal');
+    if (existing) existing.remove();
+    
     const questions = mockTestState.questions;
     let correctAnswers = 0;
 
@@ -650,56 +704,57 @@
    * Show results modal
    */
   function showResultsModal(results, questions) {
-    const existing = document.getElementById('mt-question-modal');
-    if (existing) existing.remove();
-
     const modal = document.createElement('div');
     modal.id = 'mt-results-modal';
     modal.className = 'mt-modal-overlay';
+    // FORCE display with inline styles
+    modal.style.cssText = 'position:fixed !important;top:0 !important;left:0 !important;right:0 !important;bottom:0 !important;background:rgba(0,0,0,0.8) !important;display:flex !important;align-items:center !important;justify-content:center !important;z-index:10000 !important;';
     
     const gradeColor = results.percentage >= 80 ? '#10b981' : results.percentage >= 60 ? '#f59e0b' : '#ef4444';
     
     const content = document.createElement('div');
     content.className = 'mt-modal-content mt-results-container';
+    // FORCE display with inline styles
+    content.style.cssText = 'background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%) !important;border:1px solid rgba(108,99,255,0.2) !important;border-radius:16px !important;max-width:800px !important;width:95% !important;max-height:85vh !important;display:flex !important;flex-direction:column !important;box-shadow:0 25px 50px rgba(0,0,0,0.5) !important;';
     
     let rankHtml = '';
     if (results.rank && results.rank.type === 'rank') {
       rankHtml = `
-        <div class="mt-result-card mt-rank-card">
-          <div class="mt-result-label">Predicted Rank</div>
-          <div class="mt-result-value">${results.rank.value.toLocaleString()} / ${results.rank.outOf.toLocaleString()}</div>
-          <div class="mt-result-likelihood">${results.rank.likelihood}</div>
-          <div class="mt-result-percentile">Percentile: ${results.rank.percentile}%</div>
+        <div class="mt-result-card mt-rank-card" style="grid-column:1 / -1 !important;background:rgba(108,99,255,0.08) !important;border:1px solid rgba(108,99,255,0.2) !important;border-radius:12px !important;padding:20px !important;text-align:center !important;">
+          <div class="mt-result-label" style="font-size:12px !important;font-weight:700 !important;color:rgba(255,255,255,0.5) !important;text-transform:uppercase !important;letter-spacing:1px !important;margin-bottom:8px !important;">Predicted Rank</div>
+          <div class="mt-result-value" style="font-weight:800 !important;font-size:24px !important;margin-bottom:8px !important;color:#6c63ff !important;">${results.rank.value.toLocaleString()} / ${results.rank.outOf.toLocaleString()}</div>
+          <div class="mt-result-likelihood" style="font-size:13px !important;font-weight:600 !important;margin-bottom:8px !important;">${results.rank.likelihood}</div>
+          <div class="mt-result-percentile" style="font-size:12px !important;color:rgba(255,255,255,0.5) !important;">Percentile: ${results.rank.percentile}%</div>
         </div>
       `;
     }
     
     content.innerHTML = `
-      <div class="mt-modal-header">
-        <h2>📊 Test Results</h2>
-        <button class="mt-modal-close" onclick="document.getElementById('mt-results-modal')?.remove()">✕</button>
+      <div class="mt-modal-header" style="padding:24px !important;border-bottom:1px solid rgba(108,99,255,0.2) !important;color:#ffffff !important;display:flex !important;justify-content:space-between !important;align-items:center !important;">
+        <h2 style="margin:0 !important;font-size:20px !important;font-weight:700 !important;">📊 Test Results</h2>
+        <button class="mt-modal-close" style="background:none !important;border:none !important;color:rgba(255,255,255,0.5) !important;font-size:24px !important;cursor:pointer !important;transition:color 0.2s !important;" onclick="document.getElementById('mt-results-modal')?.remove()">✕</button>
       </div>
       
-      <div class="mt-modal-body">
-        <div class="mt-results-header">
-          <h3>Congratulations! 🎉</h3>
-          <p>You completed the test in ${Math.round(results.timeTaken)}s</p>
+      <div class="mt-modal-body" style="flex:1 !important;padding:24px !important;overflow-y:auto !important;">
+        <div class="mt-results-header" style="text-align:center !important;margin-bottom:24px !important;">
+          <h3 style="margin:0 0 8px 0 !important;font-size:20px !important;font-weight:600 !important;background:linear-gradient(135deg,#6c63ff,#a78bfa) !important;-webkit-background-clip:text !important;-webkit-text-fill-color:transparent !important;background-clip:text !important;">Congratulations! 🎉</h3>
+          <p style="margin:0 !important;font-size:14px !important;color:rgba(255,255,255,0.6) !important;">You completed the test in ${Math.round(results.timeTaken)}s</p>
         </div>
 
-        <div class="mt-score-section">
-          <div class="mt-result-card">
-            <div class="mt-result-label">Score</div>
-            <div class="mt-result-value" style="color: ${gradeColor}">
+        <div class="mt-score-section" style="display:grid !important;grid-template-columns:1fr 1fr !important;gap:16px !important;margin-bottom:24px !important;">
+          <div class="mt-result-card" style="background:rgba(108,99,255,0.08) !important;border:1px solid rgba(108,99,255,0.2) !important;border-radius:12px !important;padding:20px !important;text-align:center !important;">
+            <div class="mt-result-label" style="font-size:12px !important;font-weight:700 !important;color:rgba(255,255,255,0.5) !important;text-transform:uppercase !important;letter-spacing:1px !important;margin-bottom:8px !important;">Score</div>
+            <div class="mt-result-value" style="font-weight:800 !important;font-size:24px !important;margin-bottom:8px !important;color:${gradeColor} !important;">
               ${results.score} / ${results.totalQuestions}
             </div>
           </div>
 
-          <div class="mt-result-card">
-            <div class="mt-result-label">Percentage</div>
-            <div class="mt-result-value mt-result-percentage">
+          <div class="mt-result-card" style="background:rgba(108,99,255,0.08) !important;border:1px solid rgba(108,99,255,0.2) !important;border-radius:12px !important;padding:20px !important;text-align:center !important;">
+            <div class="mt-result-label" style="font-size:12px !important;font-weight:700 !important;color:rgba(255,255,255,0.5) !important;text-transform:uppercase !important;letter-spacing:1px !important;margin-bottom:8px !important;">Percentage</div>
+            <div class="mt-result-value mt-result-percentage" style="font-weight:800 !important;font-size:24px !important;margin-bottom:8px !important;color:#fbbf24 !important;">
               ${results.percentage.toFixed(1)}%
             </div>
-            <div class="mt-result-grade">
+            <div class="mt-result-grade" style="font-size:13px !important;color:rgba(255,255,255,0.7) !important;">
               Grade: <strong>${getGradeFromPercentage(results.percentage)}</strong>
             </div>
           </div>
@@ -707,41 +762,41 @@
           ${rankHtml}
         </div>
 
-        <div class="mt-analytics-section">
-          <h4 style="margin: 0 0 16px 0; color: rgba(255,255,255,0.85);">Analytics</h4>
-          <div class="mt-analytics-grid">
-            <div class="mt-stat-card">
-              <div class="mt-stat-icon">✅</div>
-              <div class="mt-stat-label">Correct</div>
-              <div class="mt-stat-value">${results.correctAnswers}</div>
+        <div class="mt-analytics-section" style="margin-bottom:24px !important;">
+          <h4 style="margin:0 0 16px 0 !important;color:rgba(255,255,255,0.85) !important;">Analytics</h4>
+          <div class="mt-analytics-grid" style="display:grid !important;grid-template-columns:repeat(auto-fit,minmax(140px,1fr)) !important;gap:12px !important;">
+            <div class="mt-stat-card" style="background:linear-gradient(135deg,rgba(108,99,255,0.1),rgba(139,92,246,0.05)) !important;border:1px solid rgba(108,99,255,0.2) !important;border-radius:10px !important;padding:16px !important;text-align:center !important;">
+              <div class="mt-stat-icon" style="font-size:24px !important;margin-bottom:8px !important;">✅</div>
+              <div class="mt-stat-label" style="font-size:11px !important;color:rgba(255,255,255,0.6) !important;text-transform:uppercase !important;letter-spacing:0.5px !important;margin-bottom:8px !important;font-weight:600 !important;">Correct</div>
+              <div class="mt-stat-value" style="font-size:18px !important;font-weight:800 !important;color:#ffffff !important;">${results.correctAnswers}</div>
             </div>
-            <div class="mt-stat-card">
-              <div class="mt-stat-icon">❌</div>
-              <div class="mt-stat-label">Wrong</div>
-              <div class="mt-stat-value">${results.wrongAnswers}</div>
+            <div class="mt-stat-card" style="background:linear-gradient(135deg,rgba(108,99,255,0.1),rgba(139,92,246,0.05)) !important;border:1px solid rgba(108,99,255,0.2) !important;border-radius:10px !important;padding:16px !important;text-align:center !important;">
+              <div class="mt-stat-icon" style="font-size:24px !important;margin-bottom:8px !important;">❌</div>
+              <div class="mt-stat-label" style="font-size:11px !important;color:rgba(255,255,255,0.6) !important;text-transform:uppercase !important;letter-spacing:0.5px !important;margin-bottom:8px !important;font-weight:600 !important;">Wrong</div>
+              <div class="mt-stat-value" style="font-size:18px !important;font-weight:800 !important;color:#ffffff !important;">${results.wrongAnswers}</div>
             </div>
-            <div class="mt-stat-card">
-              <div class="mt-stat-icon">⏱️</div>
-              <div class="mt-stat-label">Time</div>
-              <div class="mt-stat-value">${Math.round(results.timeTaken)}s</div>
+            <div class="mt-stat-card" style="background:linear-gradient(135deg,rgba(108,99,255,0.1),rgba(139,92,246,0.05)) !important;border:1px solid rgba(108,99,255,0.2) !important;border-radius:10px !important;padding:16px !important;text-align:center !important;">
+              <div class="mt-stat-icon" style="font-size:24px !important;margin-bottom:8px !important;">⏱️</div>
+              <div class="mt-stat-label" style="font-size:11px !important;color:rgba(255,255,255,0.6) !important;text-transform:uppercase !important;letter-spacing:0.5px !important;margin-bottom:8px !important;font-weight:600 !important;">Time</div>
+              <div class="mt-stat-value" style="font-size:18px !important;font-weight:800 !important;color:#ffffff !important;">${Math.round(results.timeTaken)}s</div>
             </div>
-            <div class="mt-stat-card">
-              <div class="mt-stat-icon">⭐</div>
-              <div class="mt-stat-label">XP Earned</div>
-              <div class="mt-stat-value">${results.xp}</div>
+            <div class="mt-stat-card" style="background:linear-gradient(135deg,rgba(108,99,255,0.1),rgba(139,92,246,0.05)) !important;border:1px solid rgba(108,99,255,0.2) !important;border-radius:10px !important;padding:16px !important;text-align:center !important;">
+              <div class="mt-stat-icon" style="font-size:24px !important;margin-bottom:8px !important;">⭐</div>
+              <div class="mt-stat-label" style="font-size:11px !important;color:rgba(255,255,255,0.6) !important;text-transform:uppercase !important;letter-spacing:0.5px !important;margin-bottom:8px !important;font-weight:600 !important;">XP Earned</div>
+              <div class="mt-stat-value" style="font-size:18px !important;font-weight:800 !important;color:#ffffff !important;">${results.xp}</div>
             </div>
           </div>
         </div>
 
-        <div class="mt-recommendations">
-          <h4>📝 Recommendations</h4>
-          <p>${getRecommendations(results.percentage)}</p>
+        <div class="mt-recommendations" style="background:rgba(108,99,255,0.08) !important;border:1px solid rgba(108,99,255,0.2) !important;border-radius:10px !important;padding:16px !important;margin-bottom:12px !important;">
+          <h4 style="margin:0 0 8px 0 !important;font-size:13px !important;font-weight:700 !important;color:rgba(255,255,255,0.85) !important;">📝 Recommendations</h4>
+          <p style="margin:0 !important;font-size:13px !important;color:rgba(255,255,255,0.7) !important;line-height:1.6 !important;">${getRecommendations(results.percentage)}</p>
         </div>
       </div>
       
-      <div class="mt-modal-footer">
-        <button class="mt-btn mt-btn-secondary" onclick="document.getElementById('mt-results-modal')?.remove();showExamSelectionModal()">Back to Exams</button>
-        <button class="mt-btn mt-btn-primary" onclick="location.reload()">Take Another Test</button>
+      <div class="mt-modal-footer" style="padding:16px 24px !important;border-top:1px solid rgba(108,99,255,0.2) !important;display:flex !important;gap:12px !important;justify-content:flex-end !important;">
+        <button class="mt-btn mt-btn-secondary" onclick="document.getElementById('mt-results-modal')?.remove();window.openMockTest()" style="padding:12px 24px !important;background:rgba(108,99,255,0.15) !important;color:rgba(255,255,255,0.85) !important;border:1px solid rgba(108,99,255,0.3) !important;border-radius:8px !important;font-size:13px !important;font-weight:600 !important;cursor:pointer !important;transition:all 0.2s !important;">Back to Exams</button>
+        <button class="mt-btn mt-btn-primary" onclick="location.reload()" style="padding:12px 24px !important;background:linear-gradient(135deg,#6c63ff,#a78bfa) !important;color:#ffffff !important;border:none !important;border-radius:8px !important;font-size:13px !important;font-weight:600 !important;cursor:pointer !important;transition:all 0.2s !important;">Take Another Test</button>
       </div>
     `;
     
@@ -750,34 +805,28 @@
   }
 
   /**
-   * Get recommendations based on score
+   * Get recommendations based on percentage
    */
   function getRecommendations(percentage) {
-    if (percentage >= 90) {
-      return '🌟 Excellent! You\'re performing exceptionally well. Keep up this consistency and focus on weak areas.';
-    } else if (percentage >= 75) {
-      return '👍 Good performance! Review the questions you missed and practice more similar problems.';
-    } else if (percentage >= 60) {
-      return '📚 You\'re on the right track. Dedicate more time to studying weak topics and practice regularly.';
-    } else {
-      return '💪 Keep practicing! Focus on fundamentals and gradually increase the difficulty level.';
-    }
+    if (percentage >= 90) return '🌟 Outstanding performance! You have mastered this content. Challenge yourself with more difficult questions.';
+    if (percentage >= 80) return '👏 Excellent work! You have a strong understanding. Try advanced level questions to improve further.';
+    if (percentage >= 70) return '✅ Good job! You have a solid foundation. Focus on the weak areas to boost your score.';
+    if (percentage >= 60) return '📚 You\'re making progress! Review the topics you struggled with and practice more.';
+    if (percentage >= 50) return '⚠️ Keep practicing! Focus on fundamentals and gradually increase difficulty level.';
+    return '💪 Don\'t give up! Start with basic concepts and build your knowledge step by step.';
   }
 
   /**
-   * Public API to open mock test
-   * Can be called with exam category or without to show selection
+   * Public API for opening mock test
    */
-  window.openMockTest = function(examCategory) {
-    if (examCategory) {
-      // If exam category provided, start test directly
-      startMockTest(examCategory);
-    } else {
-      // If no category, show selection modal
-      showExamSelectionModal();
-    }
+  window.openMockTest = function() {
+    console.log('[MockTest] Opening mock test modal');
+    // Close any existing modals
+    document.querySelectorAll('[id^="mt-"]').forEach(el => el.remove());
+    // Show exam selection
+    showExamSelectionModal();
   };
-  
+
   // Alias for compatibility
   window.openMockTestModal = window.openMockTest;
 
