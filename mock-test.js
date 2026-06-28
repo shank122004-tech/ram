@@ -95,24 +95,71 @@
   }
 
   /**
-   * Load questions from Firebase Storage
+   * Convert question format from Firebase Storage format to mock-test format
+   * Firebase format: { "answer": "Option Text", "options": [...] }
+   * Mock-test format: { "answerIndex": 1, "options": [...] }
+   */
+  function normalizeQuestionFormat(questions) {
+    return questions.map(q => {
+      // If already has answerIndex, return as is
+      if (typeof q.answerIndex === 'number') {
+        return q;
+      }
+      
+      // Convert answer text to answerIndex
+      let answerIndex = 0;
+      if (q.answer && q.options) {
+        const idx = q.options.indexOf(q.answer);
+        answerIndex = idx >= 0 ? idx : 0;
+      }
+      
+      return {
+        id: q.id || `q_${Math.random()}`,
+        question: q.question || '',
+        options: q.options || [],
+        answerIndex: answerIndex,
+        explanation: q.explanation || '',
+        difficulty: q.difficulty || 'medium',
+        subject: q.subject || '',
+        chapter: q.chapter || ''
+      };
+    });
+  }
+
+  /**
+   * Load questions from Firebase Storage - FIXED VERSION
    */
   async function loadMockQuestions(examCategory) {
     try {
       mockTestState.isLoading = true;
       const url = getStorageUrl(examCategory);
       
+      console.log(`[MockTest] Loading questions for ${examCategory} from: ${url}`);
+      
       const response = await fetch(url, {
         method: 'GET',
-        headers: { 'Accept': 'application/json' }
+        headers: { 
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to load questions for ${examCategory}`);
+        throw new Error(`Firebase Storage returned ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
-      mockTestState.questions = Array.isArray(data) ? data : data.questions || [];
+      
+      // Support both array format and object with 'questions' property
+      let questions = Array.isArray(data) ? data : data.questions || [];
+      
+      if (questions.length === 0) {
+        throw new Error('No questions found in Firebase Storage');
+      }
+      
+      // Normalize question format (convert answer text to answerIndex)
+      mockTestState.questions = normalizeQuestionFormat(questions);
+      
       mockTestState.currentQuestionIndex = 0;
       mockTestState.answers = {};
       mockTestState.analyticsData = {
@@ -122,10 +169,12 @@
         timePerQuestion: []
       };
       
+      console.log(`[MockTest] Successfully loaded ${mockTestState.questions.length} questions`);
       return mockTestState.questions;
+      
     } catch (err) {
-      console.error('Error loading mock questions:', err);
-      showNotification('Failed to load questions. Please try again.', 'error');
+      console.error('[MockTest] Error loading questions:', err);
+      showNotification(`Failed to load ${examCategory} questions: ${err.message}`, 'error');
       return [];
     } finally {
       mockTestState.isLoading = false;
@@ -448,879 +497,708 @@
     content.innerHTML = `
       <div class="mt-modal-header">
         <div class="mt-progress-info">
-          <span>${mockTestState.currentQuestionIndex + 1}/${totalQuestions}</span>
-          <span class="mt-exam-title">${category.name}</span>
+          <div class="mt-exam-title">${category.name}</div>
+          <div class="mt-question-progress">${mockTestState.currentQuestionIndex + 1} of ${totalQuestions} • ${answered} answered</div>
         </div>
-        <button class="mt-modal-close" onclick="document.getElementById('mt-question-modal')?.remove();mockTestState.currentExam=null;">✕</button>
+        <button class="mt-modal-close" onclick="document.getElementById('mt-question-modal')?.remove()">✕</button>
       </div>
       
-      <div class="mt-progress-bar">
-        <div class="mt-progress-fill" style="width: ${(answered/totalQuestions)*100}%"></div>
-      </div>
-      
-      <div class="mt-modal-body mt-question-body">
-        <div class="mt-question-text">
-          <span class="mt-difficulty-badge" style="background:${getDifficultyColor(question.difficulty)}">${question.difficulty}</span>
-          <p>${question.question}</p>
-        </div>
-        
-        <div class="mt-options-container">
-          ${optionsHtml}
+      <div class="mt-modal-body">
+        <div class="mt-question-card">
+          <div class="mt-question-text">
+            <span class="mt-q-number">Q${mockTestState.currentQuestionIndex + 1}</span>
+            <p>${question.question}</p>
+          </div>
+          <div class="mt-options">${optionsHtml}</div>
+          ${question.explanation ? `
+            <div class="mt-explanation" style="margin-top: 16px; padding: 12px; background: rgba(59,130,246,0.1); border-left: 3px solid #3b82f6; border-radius: 4px;">
+              <strong>💡 Explanation:</strong> ${question.explanation}
+            </div>
+          ` : ''}
         </div>
       </div>
       
       <div class="mt-modal-footer">
-        <div class="mt-nav-buttons">
-          <button class="mt-btn mt-btn-secondary" onclick="mockTestState.currentQuestionIndex=Math.max(0,mockTestState.currentQuestionIndex-1);showQuestionModal()" ${mockTestState.currentQuestionIndex === 0 ? 'disabled' : ''}>
-            ← Previous
-          </button>
-          <button class="mt-btn mt-btn-secondary" onclick="mockTestState.currentQuestionIndex=Math.min(mockTestState.questions.length-1,mockTestState.currentQuestionIndex+1);showQuestionModal()">
-            Next →
-          </button>
-        </div>
-        
-        <button class="mt-btn mt-btn-primary" onclick="if(Object.keys(mockTestState.answers).length > 0) finishMockTest(); else showNotification('Please answer at least one question', 'error')">
-          Finish Test
+        <button class="mt-nav-btn" ${mockTestState.currentQuestionIndex === 0 ? 'disabled' : ''} onclick="previousQuestion()">← Previous</button>
+        <button class="mt-nav-btn" onclick="${mockTestState.currentQuestionIndex === totalQuestions - 1 ? 'finishMockTest()' : 'nextQuestion()'}">
+          ${mockTestState.currentQuestionIndex === totalQuestions - 1 ? 'Finish Test' : 'Next Question →'}
         </button>
       </div>
     `;
     
+    if (selectedAnswer !== undefined) {
+      const selectedBtn = content.querySelector(`[data-index="${selectedAnswer}"]`);
+      if (selectedBtn) selectedBtn.classList.add('selected');
+    }
+    
     modal.appendChild(content);
     document.body.appendChild(modal);
-    
-    // Highlight selected answer
-    if (selectedAnswer !== undefined) {
-      const buttons = document.querySelectorAll('.mt-option-btn');
-      if (buttons[selectedAnswer]) {
-        buttons[selectedAnswer].classList.add('selected');
-      }
-    }
   }
 
   /**
-   * Get difficulty color
+   * Navigate to next question
    */
-  function getDifficultyColor(difficulty) {
-    const colors = {
-      'Easy': '#22c55e',
-      'Medium': '#f59e0b',
-      'Hard': '#ef4444'
-    };
-    return colors[difficulty] || '#6b7280';
-  }
+  window.nextQuestion = function() {
+    if (mockTestState.currentQuestionIndex < mockTestState.questions.length - 1) {
+      mockTestState.currentQuestionIndex++;
+      showQuestionModal();
+    }
+  };
+
+  /**
+   * Navigate to previous question
+   */
+  window.previousQuestion = function() {
+    if (mockTestState.currentQuestionIndex > 0) {
+      mockTestState.currentQuestionIndex--;
+      showQuestionModal();
+    }
+  };
 
   /**
    * Finish mock test and show results
    */
-  async function finishMockTest() {
-    if (!mockTestState.startTime) return;
-    
-    mockTestState.endTime = Date.now();
-    const timeTaken = (mockTestState.endTime - mockTestState.startTime) / 1000; // in seconds
-    
-    // Calculate results
+  window.finishMockTest = function() {
+    const questions = mockTestState.questions;
     let correctAnswers = 0;
-    const totalQuestions = mockTestState.questions.length;
-    
-    Object.entries(mockTestState.answers).forEach(([qIdx, answerIdx]) => {
-      const question = mockTestState.questions[parseInt(qIdx)];
-      const selectedAnswer = question.options[answerIdx];
-      if (selectedAnswer === question.answer) {
+
+    questions.forEach((q, idx) => {
+      if (mockTestState.answers[idx] === q.answerIndex) {
         correctAnswers++;
       }
     });
-    
-    const percentage = (correctAnswers / totalQuestions) * 100;
-    const xp = calculateXP(correctAnswers, totalQuestions, timeTaken);
-    const rank = calculateRankPrediction(correctAnswers, totalQuestions, mockTestState.currentExam);
-    
-    mockTestState.results = {
-      examCategory: mockTestState.currentExam,
+
+    const timeTaken = (Date.now() - mockTestState.startTime) / 1000; // seconds
+    const xp = calculateXP(correctAnswers, questions.length, timeTaken);
+    const rankPrediction = calculateRankPrediction(correctAnswers, questions.length, mockTestState.currentExam);
+
+    const results = {
       score: correctAnswers,
-      totalQuestions,
-      percentage: Math.round(percentage * 10) / 10,
-      timeTaken,
-      xp,
-      rank,
-      correctAnswers,
-      wrongAnswers: totalQuestions - Object.keys(mockTestState.answers).length,
-      skipped: totalQuestions - Object.keys(mockTestState.answers).length
+      totalQuestions: questions.length,
+      percentage: (correctAnswers / questions.length) * 100,
+      timeTaken: timeTaken,
+      xp: xp,
+      rank: rankPrediction,
+      correctAnswers: correctAnswers,
+      wrongAnswers: questions.length - correctAnswers
     };
-    
-    // Save to Firestore
-    await saveMockTestResults(mockTestState.currentExam, mockTestState.results);
-    
-    // Show results
-    showResultsModal();
-  }
+
+    mockTestState.results = results;
+    saveMockTestResults(mockTestState.currentExam, results);
+    showResultsModal(results, questions);
+  };
 
   /**
    * Show results modal
    */
-  function showResultsModal() {
-    // Remove existing modals
-    document.querySelectorAll('[id^="mt-"]').forEach(el => el.remove());
-    
+  function showResultsModal(results, questions) {
+    const existing = document.getElementById('mt-question-modal');
+    if (existing) existing.remove();
+
     const modal = document.createElement('div');
     modal.id = 'mt-results-modal';
     modal.className = 'mt-modal-overlay';
     
-    const results = mockTestState.results;
-    const category = EXAM_CATEGORIES[mockTestState.currentExam];
-    const isSchoolClass = category.type === 'school';
-    
-    let rankDisplay = '';
-    if (isSchoolClass) {
-      rankDisplay = `
-        <div class="mt-result-card mt-rank-card">
-          <div class="mt-result-label">Expected Percentage</div>
-          <div class="mt-result-value" style="font-size: 48px; color: #6c63ff;">${results.rank.value}%</div>
-          <div class="mt-result-grade">Grade: <span style="font-weight: 800; font-size: 18px;">${results.rank.expectedGrade}</span></div>
-          <div class="mt-result-percentile">Percentile: ${results.rank.percentile.toFixed(1)}%</div>
-        </div>
-      `;
-    } else {
-      rankDisplay = `
-        <div class="mt-result-card mt-rank-card">
-          <div class="mt-result-label">Expected Rank</div>
-          <div class="mt-result-value" style="font-size: 36px; color: #fbbf24;">
-            ${results.rank.value.toLocaleString('en-IN')}
-            <div style="font-size: 12px; color: rgba(255,255,255,0.6);">out of ${results.rank.outOf.toLocaleString('en-IN')}</div>
-          </div>
-          <div class="mt-result-likelihood" style="color: ${results.rank.percentile >= 90 ? '#22c55e' : results.rank.percentile >= 70 ? '#f59e0b' : '#ef4444'}">
-            ${results.rank.likelihood}
-          </div>
-          <div class="mt-result-percentile">Percentile: ${results.rank.percentile.toFixed(1)}%</div>
-        </div>
-      `;
-    }
+    const gradeColor = results.percentage >= 80 ? '#10b981' : results.percentage >= 60 ? '#f59e0b' : '#ef4444';
     
     const content = document.createElement('div');
     content.className = 'mt-modal-content mt-results-container';
     
+    let rankHtml = '';
+    if (results.rank && results.rank.type === 'rank') {
+      rankHtml = `
+        <div class="mt-result-card mt-rank-card">
+          <div class="mt-result-label">Predicted Rank</div>
+          <div class="mt-result-value">${results.rank.value.toLocaleString()} / ${results.rank.outOf.toLocaleString()}</div>
+          <div class="mt-result-likelihood">${results.rank.likelihood}</div>
+          <div class="mt-result-percentile">Percentile: ${results.rank.percentile}%</div>
+        </div>
+      `;
+    }
+    
     content.innerHTML = `
       <div class="mt-modal-header">
-        <h2>🎉 Test Complete!</h2>
-        <button class="mt-modal-close" onclick="document.getElementById('mt-results-modal')?.remove();">✕</button>
+        <h2>📊 Test Results</h2>
+        <button class="mt-modal-close" onclick="document.getElementById('mt-results-modal')?.remove()">✕</button>
       </div>
       
       <div class="mt-modal-body">
         <div class="mt-results-header">
-          <h3>${category.name}</h3>
-          <p>Test Completed Successfully</p>
+          <h3>Congratulations! 🎉</h3>
+          <p>You completed the test in ${Math.round(results.timeTaken)}s</p>
         </div>
-        
+
         <div class="mt-score-section">
-          <div class="mt-result-card mt-score-card">
-            <div class="mt-result-label">Your Score</div>
-            <div class="mt-result-value" style="font-size: 52px; color: #22c55e;">
-              ${results.score}/${results.totalQuestions}
-            </div>
-            <div class="mt-result-percentage" style="font-size: 18px; color: #fbbf24;">
-              ${results.percentage}%
+          <div class="mt-result-card">
+            <div class="mt-result-label">Score</div>
+            <div class="mt-result-value" style="color: ${gradeColor}">
+              ${results.score} / ${results.totalQuestions}
             </div>
           </div>
-          
-          ${rankDisplay}
+
+          <div class="mt-result-card">
+            <div class="mt-result-label">Percentage</div>
+            <div class="mt-result-value mt-result-percentage">
+              ${results.percentage.toFixed(1)}%
+            </div>
+            <div class="mt-result-grade">
+              Grade: <strong>${getGradeFromPercentage(results.percentage)}</strong>
+            </div>
+          </div>
+
+          ${rankHtml}
         </div>
-        
+
         <div class="mt-analytics-section">
+          <h4 style="margin: 0 0 16px 0; color: rgba(255,255,255,0.85);">Analytics</h4>
           <div class="mt-analytics-grid">
             <div class="mt-stat-card">
               <div class="mt-stat-icon">✅</div>
-              <div class="mt-stat-label">Correct Answers</div>
+              <div class="mt-stat-label">Correct</div>
               <div class="mt-stat-value">${results.correctAnswers}</div>
             </div>
-            
             <div class="mt-stat-card">
               <div class="mt-stat-icon">❌</div>
-              <div class="mt-stat-label">Wrong Answers</div>
+              <div class="mt-stat-label">Wrong</div>
               <div class="mt-stat-value">${results.wrongAnswers}</div>
             </div>
-            
             <div class="mt-stat-card">
               <div class="mt-stat-icon">⏱️</div>
-              <div class="mt-stat-label">Time Taken</div>
-              <div class="mt-stat-value">${formatTime(results.timeTaken)}</div>
+              <div class="mt-stat-label">Time</div>
+              <div class="mt-stat-value">${Math.round(results.timeTaken)}s</div>
             </div>
-            
             <div class="mt-stat-card">
               <div class="mt-stat-icon">⭐</div>
               <div class="mt-stat-label">XP Earned</div>
-              <div class="mt-stat-value" style="color: #fbbf24;">+${results.xp}</div>
+              <div class="mt-stat-value">${results.xp}</div>
             </div>
           </div>
         </div>
-        
+
         <div class="mt-recommendations">
-          <h4>📈 Performance Analysis</h4>
-          <p>${getPerformanceRecommendation(results.percentage)}</p>
+          <h4>📝 Recommendations</h4>
+          <p>${getRecommendations(results.percentage)}</p>
         </div>
       </div>
       
       <div class="mt-modal-footer">
-        <button class="mt-btn mt-btn-secondary" onclick="document.getElementById('mt-results-modal')?.remove();showExamSelectionModal()">
-          Try Another Test
-        </button>
-        <button class="mt-btn mt-btn-primary" onclick="document.getElementById('mt-results-modal')?.remove();">
-          Back to Home
-        </button>
+        <button class="mt-btn mt-btn-secondary" onclick="document.getElementById('mt-results-modal')?.remove();showExamSelectionModal()">Back to Exams</button>
+        <button class="mt-btn mt-btn-primary" onclick="location.reload()">Take Another Test</button>
       </div>
     `;
     
     modal.appendChild(content);
     document.body.appendChild(modal);
-    
-    // Trigger confetti on good performance
-    if (results.percentage >= 75 && typeof confetti !== 'undefined') {
-      confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
-    }
   }
 
   /**
-   * Format time to readable format
+   * Get recommendations based on score
    */
-  function formatTime(seconds) {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    
-    if (hrs > 0) return `${hrs}h ${mins}m ${secs}s`;
-    if (mins > 0) return `${mins}m ${secs}s`;
-    return `${secs}s`;
-  }
-
-  /**
-   * Get performance recommendation
-   */
-  function getPerformanceRecommendation(percentage) {
+  function getRecommendations(percentage) {
     if (percentage >= 90) {
-      return '🌟 Exceptional performance! You\'re well-prepared for this exam. Focus on mastering the remaining weak areas and practice timed tests.';
+      return '🌟 Excellent! You\'re performing exceptionally well. Keep up this consistency and focus on weak areas.';
     } else if (percentage >= 75) {
-      return '✅ Great job! You have a strong foundation. Work on improving accuracy and speed for competitive exams.';
+      return '👍 Good performance! Review the questions you missed and practice more similar problems.';
     } else if (percentage >= 60) {
-      return '👍 Good effort! You\'re on the right track. Identify weak topics and dedicate more time to them.';
-    } else if (percentage >= 45) {
-      return '⚠️ You need more practice. Review concepts, solve more questions, and track your improvement.';
+      return '📚 You\'re on the right track. Dedicate more time to studying weak topics and practice regularly.';
     } else {
-      return '💪 Keep practicing! Start with basic concepts, build your foundation, and gradually increase difficulty levels.';
+      return '💪 Keep practicing! Focus on fundamentals and gradually increase the difficulty level.';
     }
   }
 
-  /* ─── PUBLIC API ────────────────────────────────────────────────────────── */
-  
-  window.openMockTest = function() {
-    console.log('[MockTest] openMockTest called, window.openMockTest exists:', typeof window.openMockTest);
-    console.log('[MockTest] mockTestState exists:', !!window.mockTestState);
-    console.log('[MockTest] EXAM_CATEGORIES exists:', !!EXAM_CATEGORIES);
-    try {
+  /**
+   * Public API to open mock test
+   * Can be called with exam category or without to show selection
+   */
+  window.openMockTest = function(examCategory) {
+    if (examCategory) {
+      // If exam category provided, start test directly
+      startMockTest(examCategory);
+    } else {
+      // If no category, show selection modal
       showExamSelectionModal();
-      console.log('[MockTest] showExamSelectionModal executed successfully');
-    } catch(err) {
-      console.error('[MockTest] Error in showExamSelectionModal:', err);
-      console.error('[MockTest] Stack:', err.stack);
-      alert('Error opening mock test: ' + err.message);
     }
   };
-
-  // Ensure it's also available as openMockTestModal
+  
+  // Alias for compatibility
   window.openMockTestModal = window.openMockTest;
 
-  window.showQuestionModal = showQuestionModal;
-  window.finishMockTest = finishMockTest;
-  window.mockTestState = mockTestState;
-  window.MockTest = {
-    init: function() {
-      return true;
-    },
-    open: function() {
-      showExamSelectionModal();
-    },
-    state: mockTestState
-  };
-
-  // Initialize mock test button if it exists
-  document.addEventListener('DOMContentLoaded', function() {
-    const mockTestBtn = document.getElementById('mockTestBtn');
-    if (mockTestBtn) {
-      mockTestBtn.addEventListener('click', function() {
-        window.openMockTest();
-      });
-    }
-  });
-
-  // Also handle the dropdown button click
-  if (typeof window !== 'undefined') {
-    window.addEventListener('load', function() {
-      // Handle if button is added dynamically
-      const observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-          if (mutation.addedNodes.length) {
-            mutation.addedNodes.forEach(function(node) {
-              if (node.nodeType === 1) { // Element node
-                const mockBtn = node.querySelector ? node.querySelector('#mockTestBtn') : null;
-                if (mockBtn) {
-                  mockBtn.addEventListener('click', function() {
-                    window.openMockTest();
-                  });
-                }
-              }
-            });
-          }
-        });
-      });
-      
-      observer.observe(document.body, { childList: true, subtree: true });
-    });
-  }
-
-  /* ─── STYLES ────────────────────────────────────────────────────────────────── */
+  // Inject styles
   const mockTestStyles = document.createElement('style');
   mockTestStyles.textContent = `
-/* ─── MODAL OVERLAY ─── */
+  /* ─── MODAL BASE ─── */
   .mt-modal-overlay {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    background: rgba(0, 0, 0, 0.75) !important;
+    background: rgba(0, 0, 0, 0.8) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    z-index: 99999 !important;
-    animation: mtFadeIn 0.3s ease !important;
-    backdrop-filter: blur(6px) !important;
+    z-index: 10000 !important;
+    backdrop-filter: blur(5px) !important;
   }
 
-  @keyframes mtFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
-  /* ─── MODAL CONTENT ─── */
   .mt-modal-content {
-    background: linear-gradient(135deg, #16161e 0%, #1a1a28 100%) !important;
-    border: 1.5px solid rgba(108, 99, 255, 0.25) !important;
-    border-radius: 18px !important;
-    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.5), 0 0 2px rgba(108, 99, 255, 0.2) !important;
-    max-width: 900px !important;
-    width: 92vw !important;
-    max-height: 90vh !important;
-    overflow-y: auto !important;
-    animation: mtSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    background: linear-gradient(135deg, #1a1a2e, #16213e) !important;
+    border: 1px solid rgba(108, 99, 255, 0.2) !important;
+    border-radius: 16px !important;
+    max-width: 800px !important;
+    width: 95% !important;
+    max-height: 85vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5) !important;
   }
 
-  @keyframes mtSlideIn {
-    from {
-      opacity: 0;
-      transform: translateY(30px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  /* ─── MODAL HEADER ─── */
   .mt-modal-header {
-    padding: 28px !important;
-    border-bottom: 1px solid rgba(108, 99, 255, 0.15) !important;
+    padding: 24px !important;
+    border-bottom: 1px solid rgba(108, 99, 255, 0.2) !important;
+    color: #ffffff !important;
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
-    gap: 16px !important;
   }
 
   .mt-modal-header h2 {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 800;
-    background: linear-gradient(135deg, #6c63ff, #a78bfa);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    margin: 0 !important;
+    font-size: 20px !important;
+    font-weight: 700 !important;
   }
 
-  .mt-modal-header h3 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 700;
-    color: #ffffff;
+  .mt-modal-body {
+    flex: 1 !important;
+    padding: 24px !important;
+    overflow-y: auto !important;
+  }
+
+  .mt-modal-footer {
+    padding: 16px 24px !important;
+    border-top: 1px solid rgba(108, 99, 255, 0.2) !important;
+    display: flex !important;
+    gap: 12px !important;
+    justify-content: flex-end !important;
   }
 
   .mt-modal-close {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: rgba(255, 255, 255, 0.6);
-    border-radius: 8px;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 20px;
-    transition: all 0.2s;
-    flex-shrink: 0;
+    background: none !important;
+    border: none !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+    font-size: 24px !important;
+    cursor: pointer !important;
+    transition: color 0.2s !important;
   }
 
   .mt-modal-close:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.9);
-  }
-
-  /* ─── MODAL BODY ─── */
-  .mt-modal-body {
-    padding: 28px !important;
-    color: rgba(255, 255, 255, 0.9) !important;
-  }
-
-  /* ─── MODAL FOOTER ─── */
-  .mt-modal-footer {
-    padding: 20px 28px !important;
-    border-top: 1px solid rgba(108, 99, 255, 0.15) !important;
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    gap: 12px !important;
-  }
-
-  /* ─── PROGRESS BAR ─── */
-  .mt-progress-bar {
-    height: 6px;
-    background: rgba(108, 99, 255, 0.1);
-    border-radius: 3px;
-    margin: 0;
-    overflow: hidden;
-  }
-
-  .mt-progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #6c63ff, #a78bfa);
-    border-radius: 3px;
-    transition: width 0.3s ease;
-  }
-
-  /* ─── PROGRESS INFO ─── */
-  .mt-progress-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 20px;
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.6);
-    font-weight: 600;
-  }
-
-  .mt-exam-title {
-    color: rgba(255, 255, 255, 0.8);
-    font-weight: 700;
+    color: rgba(255, 255, 255, 0.85) !important;
   }
 
   /* ─── EXAM SELECTION ─── */
   .mt-category-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 32px;
-  }
-
-  @media (max-width: 1000px) {
-    .mt-category-grid {
-      grid-template-columns: 1fr;
-      gap: 24px;
-    }
+    display: grid !important;
+    gap: 24px !important;
   }
 
   .mt-category-section {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
   }
 
   .mt-category-header {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.9);
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    margin: 0 !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: rgba(255, 255, 255, 0.9) !important;
   }
 
   .mt-exam-buttons {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 12px;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    gap: 12px !important;
   }
 
-  /* ─── EXAM BUTTONS ─── */
   .mt-exam-btn {
-    background: rgba(108, 99, 255, 0.1);
-    border: 1.5px solid rgba(108, 99, 255, 0.3);
-    border-radius: 12px;
-    padding: 16px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    color: inherit;
-    font-family: inherit;
+    padding: 16px 12px !important;
+    background: rgba(108, 99, 255, 0.12) !important;
+    border: 1px solid rgba(108, 99, 255, 0.3) !important;
+    border-radius: 12px !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+    text-align: center !important;
   }
 
   .mt-exam-btn:hover {
-    background: rgba(108, 99, 255, 0.2);
-    border-color: rgba(108, 99, 255, 0.6);
-    transform: translateY(-4px);
-    box-shadow: 0 12px 30px rgba(108, 99, 255, 0.2);
+    background: rgba(108, 99, 255, 0.25) !important;
+    border-color: rgba(108, 99, 255, 0.5) !important;
+    transform: translateY(-2px) !important;
   }
 
   .mt-exam-name {
-    font-size: 14px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.85);
-    text-align: center;
-    line-height: 1.4;
+    font-size: 13px !important;
   }
 
-  /* ─── QUESTION CONTAINER ─── */
-  .mt-question-body {
-    padding-bottom: 0 !important;
+  /* ─── QUESTION VIEW ─── */
+  .mt-question-card {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 20px !important;
+  }
+
+  .mt-progress-info {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+
+  .mt-exam-title {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: #6c63ff !important;
+  }
+
+  .mt-question-progress {
+    font-size: 13px !important;
+    color: rgba(255, 255, 255, 0.6) !important;
   }
 
   .mt-question-text {
-    margin-bottom: 28px;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .mt-q-number {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: #6c63ff !important;
+    text-transform: uppercase !important;
   }
 
   .mt-question-text p {
-    margin: 12px 0 0 0;
-    font-size: 18px;
-    font-weight: 600;
-    line-height: 1.6;
-    color: #ffffff;
+    margin: 0 !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    color: rgba(255, 255, 255, 0.95) !important;
+    line-height: 1.6 !important;
   }
 
-  .mt-difficulty-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: #ffffff;
-    letter-spacing: 0.5px;
+  .mt-options {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
   }
 
-  /* ─── OPTIONS CONTAINER ─── */
-  .mt-options-container {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  /* ─── OPTION BUTTON ─── */
   .mt-option-btn {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 16px;
-    background: rgba(108, 99, 255, 0.06);
-    border: 1.5px solid rgba(108, 99, 255, 0.2);
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-align: left;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 14px 16px !important;
+    background: rgba(108, 99, 255, 0.08) !important;
+    border: 1.5px solid rgba(108, 99, 255, 0.2) !important;
+    border-radius: 8px !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+    text-align: left !important;
   }
 
   .mt-option-btn:hover {
-    background: rgba(108, 99, 255, 0.12);
-    border-color: rgba(108, 99, 255, 0.4);
+    background: rgba(108, 99, 255, 0.15) !important;
+    border-color: rgba(108, 99, 255, 0.4) !important;
   }
 
   .mt-option-btn.selected {
-    background: rgba(108, 99, 255, 0.25);
-    border-color: #6c63ff;
-    box-shadow: 0 0 20px rgba(108, 99, 255, 0.3);
+    background: rgba(108, 99, 255, 0.25) !important;
+    border-color: #6c63ff !important;
+    color: #ffffff !important;
   }
 
   .mt-option-letter {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    background: rgba(108, 99, 255, 0.2);
-    border-radius: 8px;
-    font-weight: 700;
-    color: #6c63ff;
-    flex-shrink: 0;
-  }
-
-  .mt-option-btn.selected .mt-option-letter {
-    background: #6c63ff;
-    color: #ffffff;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 28px !important;
+    height: 28px !important;
+    background: rgba(108, 99, 255, 0.3) !important;
+    border-radius: 50% !important;
+    font-weight: 700 !important;
+    flex-shrink: 0 !important;
   }
 
   .mt-option-text {
-    font-size: 14px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.85);
-  }
-
-  /* ─── NAVIGATION BUTTONS ─── */
-  .mt-nav-buttons {
-    display: flex;
-    gap: 12px;
+    flex: 1 !important;
   }
 
   /* ─── BUTTONS ─── */
   .mt-btn {
-    padding: 12px 24px;
-    border-radius: 8px;
-    border: none;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
+    padding: 12px 24px !important;
+    border-radius: 8px !important;
+    border: none !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
   }
 
   .mt-btn-primary {
-    background: linear-gradient(135deg, #6c63ff, #a78bfa);
-    color: #ffffff;
+    background: linear-gradient(135deg, #6c63ff, #a78bfa) !important;
+    color: #ffffff !important;
   }
 
   .mt-btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(108, 99, 255, 0.4);
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 20px rgba(108, 99, 255, 0.4) !important;
   }
 
   .mt-btn-secondary {
-    background: rgba(108, 99, 255, 0.15);
-    color: rgba(255, 255, 255, 0.85);
-    border: 1px solid rgba(108, 99, 255, 0.3);
+    background: rgba(108, 99, 255, 0.15) !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    border: 1px solid rgba(108, 99, 255, 0.3) !important;
   }
 
   .mt-btn-secondary:hover {
-    background: rgba(108, 99, 255, 0.25);
-    border-color: rgba(108, 99, 255, 0.5);
+    background: rgba(108, 99, 255, 0.25) !important;
+    border-color: rgba(108, 99, 255, 0.5) !important;
+  }
+
+  .mt-nav-btn {
+    padding: 10px 20px !important;
+    background: rgba(108, 99, 255, 0.15) !important;
+    border: 1px solid rgba(108, 99, 255, 0.3) !important;
+    border-radius: 6px !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+  }
+
+  .mt-nav-btn:hover:not(:disabled) {
+    background: rgba(108, 99, 255, 0.25) !important;
+    border-color: rgba(108, 99, 255, 0.5) !important;
+  }
+
+  .mt-nav-btn:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
   }
 
   /* ─── LOADING SPINNER ─── */
   .mt-loading-spinner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 16px !important;
+    color: rgba(255, 255, 255, 0.85) !important;
   }
 
   .mt-spinner {
-    width: 48px;
-    height: 48px;
-    border: 3px solid rgba(108, 99, 255, 0.2);
-    border-top-color: #6c63ff;
-    border-radius: 50%;
-    animation: mtSpin 0.8s linear infinite;
+    width: 48px !important;
+    height: 48px !important;
+    border: 3px solid rgba(108, 99, 255, 0.2) !important;
+    border-top-color: #6c63ff !important;
+    border-radius: 50% !important;
+    animation: mtSpin 0.8s linear infinite !important;
   }
 
   @keyframes mtSpin {
-    to { transform: rotate(360deg); }
+    to { transform: rotate(360deg) !important; }
   }
 
-  /* ─── RESULTS MODAL ─── */
-  .mt-results-container {
-    max-height: none;
-  }
-
+  /* ─── RESULTS ─── */
   .mt-results-header {
-    text-align: center;
-    margin-bottom: 24px;
+    text-align: center !important;
+    margin-bottom: 24px !important;
   }
 
   .mt-results-header h3 {
-    margin: 0 0 8px 0;
-    font-size: 20px;
-    font-weight: 600;
-    background: linear-gradient(135deg, #6c63ff, #a78bfa);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    margin: 0 0 8px 0 !important;
+    font-size: 20px !important;
+    font-weight: 600 !important;
+    background: linear-gradient(135deg, #6c63ff, #a78bfa) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
   }
 
   .mt-results-header p {
-    margin: 0;
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.6);
+    margin: 0 !important;
+    font-size: 14px !important;
+    color: rgba(255, 255, 255, 0.6) !important;
   }
 
   .mt-score-section {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-
-  @media (max-width: 600px) {
-    .mt-score-section {
-      grid-template-columns: 1fr;
-    }
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 16px !important;
+    margin-bottom: 24px !important;
   }
 
   .mt-result-card {
-    background: rgba(108, 99, 255, 0.08);
-    border: 1px solid rgba(108, 99, 255, 0.2);
-    border-radius: 12px;
-    padding: 20px;
-    text-align: center;
+    background: rgba(108, 99, 255, 0.08) !important;
+    border: 1px solid rgba(108, 99, 255, 0.2) !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    text-align: center !important;
   }
 
   .mt-rank-card {
-    grid-column: 1 / -1;
+    grid-column: 1 / -1 !important;
   }
 
   .mt-result-label {
-    font-size: 12px;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.5);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 8px;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    margin-bottom: 8px !important;
   }
 
   .mt-result-value {
-    font-weight: 800;
-    margin-bottom: 8px;
+    font-weight: 800 !important;
+    font-size: 24px !important;
+    margin-bottom: 8px !important;
+    color: #6c63ff !important;
   }
 
   .mt-result-percentage {
-    color: #fbbf24;
+    color: #fbbf24 !important;
   }
 
   .mt-result-grade {
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.7);
-    margin-bottom: 4px;
+    font-size: 13px !important;
+    color: rgba(255, 255, 255, 0.7) !important;
   }
 
   .mt-result-likelihood {
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 8px;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    margin-bottom: 8px !important;
   }
 
   .mt-result-percentile {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.5);
+    font-size: 12px !important;
+    color: rgba(255, 255, 255, 0.5) !important;
   }
 
   /* ─── ANALYTICS ─── */
   .mt-analytics-section {
-    margin-bottom: 24px;
+    margin-bottom: 24px !important;
   }
 
   .mt-analytics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+    gap: 12px !important;
   }
 
   .mt-stat-card {
-    background: linear-gradient(135deg, rgba(108, 99, 255, 0.1), rgba(139, 92, 246, 0.05));
-    border: 1px solid rgba(108, 99, 255, 0.2);
-    border-radius: 10px;
-    padding: 16px;
-    text-align: center;
+    background: linear-gradient(135deg, rgba(108, 99, 255, 0.1), rgba(139, 92, 246, 0.05)) !important;
+    border: 1px solid rgba(108, 99, 255, 0.2) !important;
+    border-radius: 10px !important;
+    padding: 16px !important;
+    text-align: center !important;
   }
 
   .mt-stat-icon {
-    font-size: 24px;
-    margin-bottom: 8px;
+    font-size: 24px !important;
+    margin-bottom: 8px !important;
   }
 
   .mt-stat-label {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.6);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 8px;
-    font-weight: 600;
+    font-size: 11px !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    margin-bottom: 8px !important;
+    font-weight: 600 !important;
   }
 
   .mt-stat-value {
-    font-size: 18px;
-    font-weight: 800;
-    color: #ffffff;
+    font-size: 18px !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
   }
 
   /* ─── RECOMMENDATIONS ─── */
   .mt-recommendations {
-    background: rgba(108, 99, 255, 0.08);
-    border: 1px solid rgba(108, 99, 255, 0.2);
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 12px;
+    background: rgba(108, 99, 255, 0.08) !important;
+    border: 1px solid rgba(108, 99, 255, 0.2) !important;
+    border-radius: 10px !important;
+    padding: 16px !important;
+    margin-bottom: 12px !important;
   }
 
   .mt-recommendations h4 {
-    margin: 0 0 8px 0;
-    font-size: 13px;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.85);
+    margin: 0 0 8px 0 !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: rgba(255, 255, 255, 0.85) !important;
   }
 
   .mt-recommendations p {
-    margin: 0;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.7);
-    line-height: 1.6;
+    margin: 0 !important;
+    font-size: 13px !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+    line-height: 1.6 !important;
+  }
+
+  .mt-explanation {
+    margin-top: 16px !important;
+    padding: 12px !important;
+    background: rgba(59,130,246,0.1) !important;
+    border-left: 3px solid #3b82f6 !important;
+    border-radius: 4px !important;
+    font-size: 13px !important;
+    color: rgba(255, 255, 255, 0.85) !important;
   }
 
   /* ─── RESPONSIVE ─── */
   @media (max-width: 600px) {
     .mt-modal-content {
-      max-height: 95vh;
-      border-radius: 12px;
+      max-height: 95vh !important;
+      width: 98% !important;
     }
 
-    .mt-modal-header {
-      padding: 16px;
-    }
-
-    .mt-modal-body {
-      padding: 16px;
-    }
-
-    .mt-modal-footer {
-      padding: 16px;
-      flex-direction: column-reverse;
-    }
-
-    .mt-modal-footer .mt-btn {
-      width: 100%;
-    }
-
-    .mt-nav-buttons {
-      width: 100%;
-    }
-
-    .mt-nav-buttons .mt-btn {
-      flex: 1;
+    .mt-score-section {
+      grid-template-columns: 1fr !important;
     }
 
     .mt-exam-buttons {
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important;
     }
-  }
 
-  /* ─── DARK MODE ─── */
-  [data-theme="dark"] {
-    --bg-secondary: #16161e;
-    --text-primary: #ffffff;
-  }
+    .mt-modal-header {
+      padding: 16px !important;
+    }
 
-  /* ─── LIGHT MODE ─── */
-  [data-theme="light"] {
-    --bg-secondary: #ffffff;
-    --text-primary: #16161e;
+    .mt-modal-body {
+      padding: 16px !important;
+    }
+
+    .mt-modal-footer {
+      padding: 12px 16px !important;
+      flex-direction: column-reverse !important;
+    }
+
+    .mt-modal-footer .mt-btn {
+      width: 100% !important;
+    }
   }
 `;
 
-  document.head.appendChild(mockTestStyles);
+  if (!document.head.querySelector('style[data-mock-test-styles]')) {
+    mockTestStyles.setAttribute('data-mock-test-styles', 'true');
+    document.head.appendChild(mockTestStyles);
+  }
 
 })();
