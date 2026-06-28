@@ -96,8 +96,10 @@
 
   /**
    * Convert question format from Firebase Storage format to mock-test format
-   * Firebase format: { "answer": "Option Text", "options": [...] }
-   * Mock-test format: { "answerIndex": 1, "options": [...] }
+   * Supports multiple answer formats:
+   * 1. Letter format: "answer": "C" → answerIndex: 2
+   * 2. Text format: "answer": "100" → finds matching option
+   * 3. Index format: "answer": 2 → already correct
    */
   function normalizeQuestionFormat(questions) {
     return questions.map(q => {
@@ -106,11 +108,28 @@
         return q;
       }
       
-      // Convert answer text to answerIndex
       let answerIndex = 0;
+      
       if (q.answer && q.options) {
-        const idx = q.options.indexOf(q.answer);
-        answerIndex = idx >= 0 ? idx : 0;
+        // Handle letter format: "A", "B", "C", "D"
+        if (typeof q.answer === 'string' && q.answer.length === 1) {
+          const letterToIndex = {
+            'A': 0, 'a': 0,
+            'B': 1, 'b': 1,
+            'C': 2, 'c': 2,
+            'D': 3, 'd': 3
+          };
+          answerIndex = letterToIndex[q.answer] ?? 0;
+        } 
+        // Handle text format: match with option text
+        else if (typeof q.answer === 'string') {
+          const idx = q.options.indexOf(q.answer);
+          answerIndex = idx >= 0 ? idx : 0;
+        }
+        // Handle index format
+        else if (typeof q.answer === 'number') {
+          answerIndex = q.answer;
+        }
       }
       
       return {
