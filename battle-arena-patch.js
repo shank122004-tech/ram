@@ -5297,6 +5297,8 @@
           continue;
         }
         const paths = [
+          exam + '.json',
+          'mock/' + exam + '.json',
           'mock/' + exam + '/questions.json',
           'tests/mock/' + exam + '/questions.json',
           'mocktest/' + exam + '/questions.json',
